@@ -158,7 +158,8 @@ def trans_col(df, col=0, lang='en'):
     for i in range(len(sen_ls)):
         txt = str(sen_ls[i])
         translator = Translator()
-        txt_trans = translator.translate(txt, dest=lang).text
+        if len(txt) < 800:
+            txt_trans = translator.translate(txt, dest=lang).text
         sen_trans_ls.append(txt_trans)
     df[col_ls[col]] = df[col_ls[col]].replace(sen_ls, sen_trans_ls)
     return df
@@ -399,6 +400,29 @@ def update_df(df, val_idx, val_to_fill, user='-', col_idx=1, col_to_fill=15, col
     return df_update
 
 
+def update_mentor_df(df, val_idx, val_to_fill, user='-', col_idx=1, col_to_fill=17,
+                     col_user=14):
+    """
+    Function to update the dataframes based on the new match
+    :arg df: dataframe              - input dataframe to fill
+    :arg val_idx: str               - value to look for
+    :arg val_to_fill: str           - value to fill
+    :arg user: str                  - user name
+    :arg col_idx: int               - column where to look for value
+    :arg col_to_fill: int           - column where to fill the new value
+    :arg col_status: int            - column for status change
+    :arg new_status: str            - new status
+    :arg col_user: int              - col for filling the user name
+    :return df_update: dataframe    - updated dataframe
+    """
+    df_update = df
+    col_ls = df.columns.values.tolist()
+    val_is = str(df_update.loc[df_update[col_ls[col_idx]] == val_idx, [col_ls[col_to_fill]]].values.tolist()[0])
+    df_update.loc[df_update[col_ls[col_idx]] == val_idx, [col_ls[col_to_fill]]] = val_is + ' ' + val_to_fill
+    df_update.loc[df_update[col_ls[col_idx]] == val_idx, [col_ls[col_user]]] = user
+    return df_update
+
+
 def get_mentee_info(df, val, col=1):
     col_ls = df.columns.values.tolist()
     sel_row = df.loc[df[col_ls[col]] == val].copy()
@@ -418,14 +442,48 @@ def get_mentee_info(df, val, col=1):
 def get_mentor_info(df, val, col=1):
     col_ls = df.columns.values.tolist()
     sel_row = df.loc[df[col_ls[col]] == val].copy()
-    cols_to_trans = [4, 8, 9, 10, 12]
+    cols_to_trans = [4, 8, 9, 10, 13]
     sel_row_trans = trans_df(sel_row, lang='en', cols=cols_to_trans, trans_col_names=False)
     output = {'name': sel_row_trans[col_ls[2]].values.tolist()[0],
               'role': sel_row_trans[col_ls[8]].values.tolist()[0],
               'linkedin': sel_row_trans[col_ls[5]].values.tolist()[0],
-              'location': sel_row_trans[col_ls[12]].values.tolist()[0],
+              'location': sel_row_trans[col_ls[13]].values.tolist()[0],
               'languages': sel_row_trans[col_ls[4]].values.tolist()[0],
               'experience': sel_row_trans[col_ls[9]].values.tolist()[0],
               'topic': sel_row_trans[col_ls[10]].values.tolist()[0]
               }
     return output
+
+
+def check_if_busy(df, idx_col=1, col_max=11, col_add=17):
+    col_ls = df.columns.values.tolist()
+    df_n = pd.DataFrame(columns=col_ls)
+    idx_ls = df[col_ls[idx_col]].values.tolist()
+    max_ls = df[col_ls[col_max]].values.tolist()
+    add_ls = df[col_ls[col_add]].values.tolist()
+    for i in range(len(max_ls)):
+        max_i = 10
+        try:
+            max_i = int(max_ls[i])
+        except:
+            pass
+        txt = str(add_ls[i])
+        add_i = 0
+        if len(txt) > 0:
+            add_i = len(txt.split())
+        if add_i < max_i:
+            df_n = pd.concat([df_n, df.loc[df[col_ls[idx_col]] == idx_ls[i]]], ignore_index=False)
+    return df_n
+
+
+def check_dupl(df, idx_col=0):
+    col_ls = df.columns.values.tolist()
+    df_n = pd.DataFrame(columns=col_ls)
+    idx_ls = df[col_ls[idx_col]].values.tolist()
+    idx_ls_n = []
+    df_index = df.index
+    for i in range(len(idx_ls)):
+        if idx_ls[i] not in idx_ls_n:
+            df_n = pd.concat([df_n, df.loc[df.index == df_index[i]]], ignore_index=False)
+            idx_ls_n.append(idx_ls[i])
+    return df_n
